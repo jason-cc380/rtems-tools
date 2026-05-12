@@ -59,5 +59,15 @@ def get_arch_module():
     return None
 
 
+# Initialize RTEMS commands
+rtems.create()
+
 print('RTEMS GDB Support loaded')
 print('  Architecture support: AArch64, SPARC')
+print('  Available commands:')
+print('    rtems - Prefix command for all RTEMS commands')
+print('    rtems task - Display task information')
+print('    rtems semaphore - Display semaphore information')
+print('    rtems cpu - Display CPU information (SMP)')
+print('    rtems tod - Display time of day')
+print('    rtems object - Display object by ID')

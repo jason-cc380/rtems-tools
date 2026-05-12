@@ -24,7 +24,13 @@ For bug reporting instructions, please see:
 (gdb) source path/to/clone/__init__.py
 RTEMS GDB Support loaded
   Architecture support: AArch64, SPARC
-  AArch64 support enabled
+  Available commands:
+    rtems - Prefix command for all RTEMS commands
+    rtems task - Display task information
+    rtems semaphore - Display semaphore information
+    rtems cpu - Display CPU information (SMP)
+    rtems tod - Display time of day
+    rtems object - Display object by ID
 (gdb)
 ```
 
