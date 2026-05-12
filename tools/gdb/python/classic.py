@@ -173,6 +173,16 @@ class task:
         self.task = threads.control(self.reference)
         self.wait_info = self.task.wait_info()
         self.regs = self.task.registers()
+        
+        # Auto-detect architecture and use appropriate register handler
+        try:
+            import aarch64
+            if aarch64.is_aarch64():
+                self.arch_regs = aarch64.context(self.object['Registers'])
+            else:
+                self.arch_regs = None
+        except:
+            self.arch_regs = None
         #self.regs = sparc.register(self.object['Registers'])
 
     def show(self, from_tty):
@@ -191,10 +201,15 @@ class task:
             print('   T Budget:', self.task.cpu_time_budget())
             print('       Time:', self.task.cpu_time_used())
             print('  Resources:', self.task.resource_count())
-            print('  Regsters:')
-            for name in self.regs.names():
-                val = self.regs.get(name)
-                print('    %20s: %08x (%d)' % (name, val, val))
+            
+            # Show architecture-specific registers
+            if self.arch_regs:
+                self.arch_regs.show()
+            else:
+                print('  Registers:')
+                for name in self.regs.names():
+                    val = self.regs.get(name)
+                    print('    %20s: %08x (%d)' % (name, val, val))
             return True
         return False
 
