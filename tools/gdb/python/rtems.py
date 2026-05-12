@@ -70,7 +70,7 @@ class rtems_object(gdb.Command):
                                            gdb.COMPLETE_SYMBOL)
 
     def invoke(self, arg, from_tty):
-        vald = False
+        valid = False
         for num in arg.split():
             try:
                 val = gdb.parse_and_eval(num)
@@ -112,10 +112,18 @@ class rtems_index(gdb.Command):
 
     def invoke(self, arg, from_tty):
         maximum = objects.information.maximum(self.api, self._class)
-        minimum_id = objects.ident(
-            objects.information.minimum_id(self.api, self._class))
-        maximum_id = objects.ident(
-            objects.information.maximum_id(self.api, self._class))
+        minimum_id_val = objects.information.minimum_id(self.api, self._class)
+        maximum_id_val = objects.information.maximum_id(self.api, self._class)
+        
+        # Handle case where we can't find the limits (RTEMS 6.x with missing symbols)
+        if maximum == 0 and minimum_id_val == 0 and maximum_id_val == 0:
+            print("warning: Cannot determine object limits for %s/%s" % (self.api, self._class))
+            print("This may indicate RTEMS 6.x with incomplete symbol information.")
+            print("Try using 'rtems task <id>' with a known task ID instead.")
+            return False
+            
+        minimum_id = objects.ident(minimum_id_val)
+        maximum_id = objects.ident(maximum_id_val)
         args = arg.split()
         valid = False
         if len(args):
@@ -138,6 +146,10 @@ class rtems_index(gdb.Command):
                 except IndexError:
                     print("error: index %s is invalid" % (index))
                     return
+                except gdb.error as e:
+                    print("error: Failed to get object at index %d: %s" % (index, str(e)))
+                    print("This may be an invalid or unused slot.")
+                    continue
                 instance = self.instance(obj)
                 valid = instance.show(from_tty)
             objects.information.invalidate()
@@ -146,12 +158,28 @@ class rtems_index(gdb.Command):
             print(' %s: %d [%08x -> %08x]' %
                   (objects.information.name(self.api, self._class), maximum,
                    minimum_id.value(), maximum_id.value()))
-            valid = True
-            for index in range(minimum_id.index(),
-                               minimum_id.index() + maximum):
-                if valid:
-                    print('-' * 70)
-                valid = self.invoke(str(index), from_tty)
+            # For RTEMS 6.x, iterate through possible IDs instead of indices
+            if maximum > 0:
+                valid = True
+                found_count = 0
+                for index in range(minimum_id.index(),
+                                   minimum_id.index() + maximum):
+                    try:
+                        if valid:
+                            print('-' * 70)
+                        result = self.invoke(str(index), from_tty)
+                        if result:
+                            found_count += 1
+                        valid = result
+                    except:
+                        # Skip invalid indices silently
+                        pass
+                if found_count == 0:
+                    print("No active %s found in range [%d, %d]" % 
+                          (self._class, minimum_id.index(), minimum_id.index() + maximum - 1))
+            else:
+                print("warning: No objects found (maximum=0)")
+                valid = False
         return valid
 
 
@@ -265,6 +293,37 @@ class rtems_tod(gdb.Command):
         objects.information.invalidate()
 
 
+class rtems_cpu(gdb.Command):
+    '''Print CPU information for SMP systems'''
+
+    def __init__(self):
+        self.__doc__ = 'Display CPU information for multi-core systems'
+        super(rtems_cpu, self).__init__ \
+                    ('rtems cpu', gdb.COMMAND_STATUS, gdb.COMPLETE_NONE)
+
+    def invoke(self, arg, from_tty):
+        import percpu
+        
+        if arg:
+            try:
+                cpu_id = int(arg)
+                # Show specific CPU
+                per_cpu = percpu.get(cpu_id)
+                executing = per_cpu['executing']
+                heir = per_cpu['heir']
+                
+                print("CPU %d Information:" % cpu_id)
+                print("  Executing thread: 0x%x" % int(executing))
+                print("  Heir thread:      0x%x" % int(heir))
+            except ValueError:
+                print("error: '%s' is not a valid CPU number" % arg)
+            except Exception as e:
+                print("error: %s" % str(e))
+        else:
+            # Show all CPUs
+            percpu.show_all_cpus()
+
+
 class rtems_watchdog_chain(gdb.Command):
     '''Print watchdog ticks chain'''
 
@@ -314,4 +373,6 @@ class rtems_wsec(rtems_watchdog_chain):
 
 def create():
     return (rtems(), rtems_object(), rtems_semaphore(), rtems_task(),
-            rtems_message_queue(), rtems_tod(), rtems_wdt(), rtems_wsec())
+            rtems_message_queue(), rtems_timer(), rtems_partition(),
+            rtems_region(), rtems_barrier(), rtems_tod(), rtems_cpu(),
+            rtems_wdt(), rtems_wsec())

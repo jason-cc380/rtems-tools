@@ -1,12 +1,1 @@
-*~
-*.pyc
-*.log
-log_*
-.waf-*
-.waf3-*
-waf-*
-waf3-*
-.lock-waf*
-build
-VERSION*
-*symbols.ini
+Nothing needs to be added to the .gitignore file based on the provided file changes, as they only include source code files (.py and .md) without any build artifacts, dependencies, or temporary files that should be ignored.
