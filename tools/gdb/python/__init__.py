@@ -30,12 +30,6 @@
 import gdb
 import rtems
 
-# Import architecture-specific modules
-try:
-    import aarch64
-except ImportError:
-    pass
-
 
 def get_architure():
     frame = gdb.selected_frame()
@@ -43,21 +37,4 @@ def get_architure():
     return arch.name()
 
 
-def get_arch_module():
-    """Get the appropriate architecture module for current target."""
-    try:
-        arch_name = get_architure().lower()
-        if 'aarch64' in arch_name or 'arm64' in arch_name:
-            import aarch64
-            return aarch64
-        elif 'sparc' in arch_name:
-            import sparc
-            return sparc
-        # Add more architectures as needed
-    except:
-        pass
-    return None
-
-
-print('RTEMS GDB Support loaded')
-print('  Architecture support: AArch64, SPARC')
+print('RTEMS GDB Support')
