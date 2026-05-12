@@ -112,10 +112,18 @@ class rtems_index(gdb.Command):
 
     def invoke(self, arg, from_tty):
         maximum = objects.information.maximum(self.api, self._class)
-        minimum_id = objects.ident(
-            objects.information.minimum_id(self.api, self._class))
-        maximum_id = objects.ident(
-            objects.information.maximum_id(self.api, self._class))
+        minimum_id_val = objects.information.minimum_id(self.api, self._class)
+        maximum_id_val = objects.information.maximum_id(self.api, self._class)
+        
+        # Handle case where we can't find the limits (RTEMS 6.x with missing symbols)
+        if maximum == 0 and minimum_id_val == 0 and maximum_id_val == 0:
+            print("warning: Cannot determine object limits for %s/%s" % (self.api, self._class))
+            print("This may indicate RTEMS 6.x with incomplete symbol information.")
+            print("Try using 'rtems task <id>' with a known task ID instead.")
+            return False
+            
+        minimum_id = objects.ident(minimum_id_val)
+        maximum_id = objects.ident(maximum_id_val)
         args = arg.split()
         valid = False
         if len(args):
@@ -138,6 +146,10 @@ class rtems_index(gdb.Command):
                 except IndexError:
                     print("error: index %s is invalid" % (index))
                     return
+                except gdb.error as e:
+                    print("error: Failed to get object at index %d: %s" % (index, str(e)))
+                    print("This may be an invalid or unused slot.")
+                    continue
                 instance = self.instance(obj)
                 valid = instance.show(from_tty)
             objects.information.invalidate()
@@ -146,12 +158,28 @@ class rtems_index(gdb.Command):
             print(' %s: %d [%08x -> %08x]' %
                   (objects.information.name(self.api, self._class), maximum,
                    minimum_id.value(), maximum_id.value()))
-            valid = True
-            for index in range(minimum_id.index(),
-                               minimum_id.index() + maximum):
-                if valid:
-                    print('-' * 70)
-                valid = self.invoke(str(index), from_tty)
+            # For RTEMS 6.x, iterate through possible IDs instead of indices
+            if maximum > 0:
+                valid = True
+                found_count = 0
+                for index in range(minimum_id.index(),
+                                   minimum_id.index() + maximum):
+                    try:
+                        if valid:
+                            print('-' * 70)
+                        result = self.invoke(str(index), from_tty)
+                        if result:
+                            found_count += 1
+                        valid = result
+                    except:
+                        # Skip invalid indices silently
+                        pass
+                if found_count == 0:
+                    print("No active %s found in range [%d, %d]" % 
+                          (self._class, minimum_id.index(), minimum_id.index() + maximum - 1))
+            else:
+                print("warning: No objects found (maximum=0)")
+                valid = False
         return valid
 
 

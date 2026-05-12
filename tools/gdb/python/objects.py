@@ -82,45 +82,81 @@ class infotables():
         self.load(n)
         if n not in self.tables:
             return 0
+        table = self.tables[n]
+        # Try RTEMS 6.x structure first (fields in Base sub-structure)
         try:
-            return int(self.tables[n]['minimum_id'])
+            return int(table['Base']['minimum_id'])
         except gdb.error:
-            # Try alternative field names for RTEMS 6.x
-            try:
-                return int(self.tables[n]['minimum'])
-            except gdb.error:
-                print("error: Cannot find minimum_id for %s/%s" % (api, _class))
-                return 0
+            pass
+        # Try alternative field names for RTEMS 6.x
+        try:
+            return int(table['Base']['minimum'])
+        except gdb.error:
+            pass
+        # Fallback to RTEMS 5.x structure
+        try:
+            return int(table['minimum_id'])
+        except gdb.error:
+            pass
+        try:
+            return int(table['minimum'])
+        except gdb.error:
+            print("error: Cannot find minimum_id for %s/%s" % (api, _class))
+            return 0
 
     def maximum_id(self, api, _class):
         n = self.name(api, _class)
         self.load(n)
         if n not in self.tables:
             return 0
+        table = self.tables[n]
+        # Try RTEMS 6.x structure first (fields in Base sub-structure)
         try:
-            return int(self.tables[n]['maximum_id'])
+            return int(table['Base']['maximum_id'])
         except gdb.error:
-            # Try alternative field names for RTEMS 6.x
-            try:
-                return int(self.tables[n]['maximum'])
-            except gdb.error:
-                print("error: Cannot find maximum_id for %s/%s" % (api, _class))
-                return 0
+            pass
+        # Try alternative field names for RTEMS 6.x
+        try:
+            return int(table['Base']['maximum'])
+        except gdb.error:
+            pass
+        # Fallback to RTEMS 5.x structure
+        try:
+            return int(table['maximum_id'])
+        except gdb.error:
+            pass
+        try:
+            return int(table['maximum'])
+        except gdb.error:
+            print("error: Cannot find maximum_id for %s/%s" % (api, _class))
+            return 0
 
     def maximum(self, api, _class):
         n = self.name(api, _class)
         self.load(n)
         if n not in self.tables:
             return 0
+        table = self.tables[n]
+        # Try RTEMS 6.x structure first (fields in Base sub-structure)
         try:
-            return int(self.tables[n]['maximum'])
+            return int(table['Base']['maximum'])
         except gdb.error:
-            # Try alternative field names for RTEMS 6.x
-            try:
-                return int(self.tables[n]['maximum_objects'])
-            except gdb.error:
-                print("error: Cannot find maximum for %s/%s" % (api, _class))
-                return 0
+            pass
+        # Try alternative field names for RTEMS 6.x
+        try:
+            return int(table['Base']['maximum_objects'])
+        except gdb.error:
+            pass
+        # Fallback to RTEMS 5.x structure
+        try:
+            return int(table['maximum'])
+        except gdb.error:
+            pass
+        try:
+            return int(table['maximum_objects'])
+        except gdb.error:
+            print("error: Cannot find maximum for %s/%s" % (api, _class))
+            return 0
 
     def object(self, id):
         if type(id) == gdb.Value:
@@ -145,8 +181,18 @@ class infotables():
             max = self.maximum(api, _class)
             if index > max:
                 raise IndexError('object index out of range (%d)' % (max))
-            expr = '(%s*) %s.local_table[%d]' % (table_type[0], table_type[1],
-                                                 index)
+            # Try RTEMS 6.x structure first (no local_table, use Objects_Get)
+            table = self.tables[n]
+            try:
+                # Check if local_table exists (RTEMS 5.x)
+                _ = table['local_table']
+                expr = '(%s*) %s.local_table[%d]' % (table_type[0], table_type[1], index)
+            except gdb.error:
+                # RTEMS 6.x: Use iterative approach via Objects_Get
+                # Build the ID from api, class, and index
+                min_id = self.minimum_id(api, _class)
+                target_id = min_id + index
+                expr = '(%s*) Objects_Get(%d)' % (table_type[0], target_id)
         return gdb.parse_and_eval(expr)
 
     def is_string(self, api, _class):
