@@ -115,8 +115,28 @@ class infotables():
             max = self.maximum(api, _class)
             if index > max:
                 raise IndexError('object index out of range (%d)' % (max))
-            expr = '(%s*) %s.local_table[%d]' % (table_type[0], table_type[1],
-                                                 index)
+            # Try to access the object using different methods for different RTEMS versions
+            # First try the newer API without local_table
+            try:
+                # For newer RTEMS versions, use _Objects_Get or similar
+                table = self.tables[n]
+                # Check if local_table exists
+                has_local_table = False
+                for f in table.type.fields():
+                    if f.name == 'local_table':
+                        has_local_table = True
+                        break
+                if has_local_table:
+                    expr = '(%s*) %s.local_table[%d]' % (table_type[0], table_type[1], index)
+                else:
+                    # For newer versions, try to get the objects differently
+                    # Use minimum_id + index to compute the actual ID, then get object by ID
+                    min_id = self.minimum_id(api, _class)
+                    obj_id = min_id + index
+                    expr = '(%s*) _Objects_Get((Objects_Id)0x%x)' % (table_type[0], obj_id)
+            except gdb.error:
+                # Fallback to old method if new method fails
+                expr = '(%s*) %s.local_table[%d]' % (table_type[0], table_type[1], index)
         return gdb.parse_and_eval(expr)
 
     def is_string(self, api, _class):
