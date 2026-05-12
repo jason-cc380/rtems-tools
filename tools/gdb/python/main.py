@@ -18,5 +18,13 @@ rtems.rtems_semaphore()
 rtems.rtems_task()
 rtems.rtems_message_queue()
 rtems.rtems_tod()
+rtems.rtems_cpu()
 rtems.rtems_wdt()
 rtems.rtems_wsec()
+
+# Register architecture-specific commands
+try:
+    import aarch64
+    print('  AArch64 support enabled')
+except ImportError:
+    pass

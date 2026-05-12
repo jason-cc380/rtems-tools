@@ -265,6 +265,37 @@ class rtems_tod(gdb.Command):
         objects.information.invalidate()
 
 
+class rtems_cpu(gdb.Command):
+    '''Print CPU information for SMP systems'''
+
+    def __init__(self):
+        self.__doc__ = 'Display CPU information for multi-core systems'
+        super(rtems_cpu, self).__init__ \
+                    ('rtems cpu', gdb.COMMAND_STATUS, gdb.COMPLETE_NONE)
+
+    def invoke(self, arg, from_tty):
+        import percpu
+        
+        if arg:
+            try:
+                cpu_id = int(arg)
+                # Show specific CPU
+                per_cpu = percpu.get(cpu_id)
+                executing = per_cpu['executing']
+                heir = per_cpu['heir']
+                
+                print("CPU %d Information:" % cpu_id)
+                print("  Executing thread: 0x%x" % int(executing))
+                print("  Heir thread:      0x%x" % int(heir))
+            except ValueError:
+                print("error: '%s' is not a valid CPU number" % arg)
+            except Exception as e:
+                print("error: %s" % str(e))
+        else:
+            # Show all CPUs
+            percpu.show_all_cpus()
+
+
 class rtems_watchdog_chain(gdb.Command):
     '''Print watchdog ticks chain'''
 
