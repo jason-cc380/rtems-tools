@@ -80,17 +80,50 @@ class infotables():
     def minimum_id(self, api, _class):
         n = self.name(api, _class)
         self.load(n)
-        return int(self.tables[n]['minimum_id'])
+        if n not in self.tables:
+            raise gdb.error('Cannot find minimum_id for %s' % n)
+        # Try RTEMS 6.x structure with Base sub-structure first
+        try:
+            return int(self.tables[n]['Base']['minimum_id'])
+        except (gdb.error, KeyError):
+            pass
+        # Fall back to RTEMS 5.x structure
+        try:
+            return int(self.tables[n]['minimum_id'])
+        except (gdb.error, KeyError):
+            raise gdb.error('Cannot find minimum_id for %s (tried both Base.minimum_id and minimum_id)' % n)
 
     def maximum_id(self, api, _class):
         n = self.name(api, _class)
         self.load(n)
-        return int(self.tables[n]['maximum_id'])
+        if n not in self.tables:
+            raise gdb.error('Cannot find maximum_id for %s' % n)
+        # Try RTEMS 6.x structure with Base sub-structure first
+        try:
+            return int(self.tables[n]['Base']['maximum_id'])
+        except (gdb.error, KeyError):
+            pass
+        # Fall back to RTEMS 5.x structure
+        try:
+            return int(self.tables[n]['maximum_id'])
+        except (gdb.error, KeyError):
+            raise gdb.error('Cannot find maximum_id for %s (tried both Base.maximum_id and maximum_id)' % n)
 
     def maximum(self, api, _class):
         n = self.name(api, _class)
         self.load(n)
-        return int(self.tables[n]['maximum'])
+        if n not in self.tables:
+            raise gdb.error('Cannot find maximum for %s' % n)
+        # Try RTEMS 6.x structure with Base sub-structure first
+        try:
+            return int(self.tables[n]['Base']['maximum'])
+        except (gdb.error, KeyError):
+            pass
+        # Fall back to RTEMS 5.x structure
+        try:
+            return int(self.tables[n]['maximum'])
+        except (gdb.error, KeyError):
+            raise gdb.error('Cannot find maximum for %s (tried both Base.maximum and maximum)' % n)
 
     def object(self, id):
         if type(id) == gdb.Value:
@@ -115,8 +148,20 @@ class infotables():
             max = self.maximum(api, _class)
             if index > max:
                 raise IndexError('object index out of range (%d)' % (max))
-            expr = '(%s*) %s.local_table[%d]' % (table_type[0], table_type[1],
-                                                 index)
+            # Try RTEMS 6.x structure first (no local_table, use Per_CPU or direct access)
+            try:
+                # Try to get the information table and access via Base.local_table or similar
+                info = self.tables[n]
+                # Check for Base.local_table (RTEMS 6.x)
+                try:
+                    local_table = info['Base']['local_table']
+                    expr = '(%s*) %s[%d]' % (table_type[0], local_table.address, index)
+                except (gdb.error, KeyError):
+                    # Fall back to old local_table access (RTEMS 5.x)
+                    expr = '(%s*) %s.local_table[%d]' % (table_type[0], table_type[1], index)
+            except (gdb.error, KeyError):
+                # Last resort: try direct symbol access
+                expr = '(%s*) %s' % (table_type[0], table_type[1])
         return gdb.parse_and_eval(expr)
 
     def is_string(self, api, _class):

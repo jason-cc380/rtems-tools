@@ -314,4 +314,6 @@ class rtems_wsec(rtems_watchdog_chain):
 
 def create():
     return (rtems(), rtems_object(), rtems_semaphore(), rtems_task(),
-            rtems_message_queue(), rtems_tod(), rtems_wdt(), rtems_wsec())
+            rtems_message_queue(), rtems_timer(), rtems_partition(),
+            rtems_region(), rtems_barrier(), rtems_tod(), rtems_wdt(),
+            rtems_wsec())

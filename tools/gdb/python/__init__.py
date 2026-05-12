@@ -27,9 +27,25 @@
 # POSSIBILITY OF SUCH DAMAGE.
 #
 
+import sys
+import os
 import gdb
-import rtems
 
+# Auto-detect script directory and add to path for proper module imports
+_script_dir = os.path.dirname(os.path.abspath(__file__))
+if _script_dir not in sys.path:
+    sys.path.insert(0, _script_dir)
+
+# Import RTEMS modules
+import rtems
+try:
+    import aarch64
+except ImportError:
+    pass
+try:
+    import sparc
+except ImportError:
+    pass
 
 def get_architure():
     frame = gdb.selected_frame()
@@ -37,4 +53,22 @@ def get_architure():
     return arch.name()
 
 
-print('RTEMS GDB Support')
+print('RTEMS GDB Support loaded')
+print('  Architecture support: AArch64, SPARC')
+print('  Available commands:')
+print('    rtems - Prefix command for all RTEMS commands')
+print('    rtems task - Display task information')
+print('    rtems semaphore - Display semaphore information')
+print('    rtems mqueue - Display message queue information')
+print('    rtems timer - Display timer information')
+print('    rtems partition - Display partition information')
+print('    rtems region - Display region information')
+print('    rtems barrier - Display barrier information')
+print('    rtems cpu - Display CPU information (SMP)')
+print('    rtems tod - Display time of day')
+print('    rtems wdticks - Display watchdog ticks')
+print('    rtems wdseconds - Display watchdog seconds')
+print('    rtems object - Display object by ID')
+
+# Register all RTEMS commands
+rtems.create()
