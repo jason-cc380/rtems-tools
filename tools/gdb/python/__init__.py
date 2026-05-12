@@ -28,11 +28,25 @@
 #
 
 import gdb
+import sys
+import os
+
+# Get the directory of this file and add it to sys.path if needed
+_script_dir = os.path.dirname(os.path.abspath(__file__))
+if _script_dir not in sys.path:
+    sys.path.insert(0, _script_dir)
+
+# Import RTEMS modules
 import rtems
 
 # Import architecture-specific modules
 try:
     import aarch64
+except ImportError:
+    pass
+
+try:
+    import sparc
 except ImportError:
     pass
 
