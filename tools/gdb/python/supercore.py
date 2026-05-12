@@ -42,13 +42,30 @@ class time_of_day:
         self.tod = tod
 
     def now(self):
-        return self.tod['now']
+        try:
+            return self.tod['now']
+        except gdb.error:
+            # Try alternative field name for RTEMS 6.x
+            try:
+                return self.tod['tod']
+            except gdb.error:
+                return "unknown"
 
     def timer(self):
-        return self.tod['uptime']
+        try:
+            return self.tod['uptime']
+        except gdb.error:
+            return "unknown"
 
     def is_set(self):
-        return bool(self.tod['is_set'])
+        try:
+            return bool(self.tod['is_set'])
+        except gdb.error:
+            # Try alternative field name for RTEMS 6.x
+            try:
+                return bool(self.tod['set'])
+            except gdb.error:
+                return False
 
     def show(self):
         print(' Time Of Day')

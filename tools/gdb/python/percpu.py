@@ -40,7 +40,16 @@ def _table(cpu):
     max_cpus = configuration.maximum_processors()
     if cpu >= max_cpus:
         raise IndexError('cpu index out of range (%d)' % (max_cpus))
-    return gdb.parse_and_eval('_Per_CPU_Information[%d].per_cpu' % (cpu))
+    try:
+        # Try RTEMS 6.x structure
+        return gdb.parse_and_eval('_Per_CPU_Information[%d].per_cpu' % (cpu))
+    except gdb.error:
+        # Try alternative for RTEMS 6.x
+        try:
+            return gdb.parse_and_eval('_Per_CPU_Information[%d]' % (cpu))
+        except gdb.error:
+            # Fallback to direct array access
+            return gdb.parse_and_eval('_Per_CPU_Information[%d]' % (cpu))
 
 
 def get(cpu):

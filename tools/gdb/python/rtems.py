@@ -70,7 +70,7 @@ class rtems_object(gdb.Command):
                                            gdb.COMPLETE_SYMBOL)
 
     def invoke(self, arg, from_tty):
-        vald = False
+        valid = False
         for num in arg.split():
             try:
                 val = gdb.parse_and_eval(num)

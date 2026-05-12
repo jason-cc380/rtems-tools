@@ -80,17 +80,47 @@ class infotables():
     def minimum_id(self, api, _class):
         n = self.name(api, _class)
         self.load(n)
-        return int(self.tables[n]['minimum_id'])
+        if n not in self.tables:
+            return 0
+        try:
+            return int(self.tables[n]['minimum_id'])
+        except gdb.error:
+            # Try alternative field names for RTEMS 6.x
+            try:
+                return int(self.tables[n]['minimum'])
+            except gdb.error:
+                print("error: Cannot find minimum_id for %s/%s" % (api, _class))
+                return 0
 
     def maximum_id(self, api, _class):
         n = self.name(api, _class)
         self.load(n)
-        return int(self.tables[n]['maximum_id'])
+        if n not in self.tables:
+            return 0
+        try:
+            return int(self.tables[n]['maximum_id'])
+        except gdb.error:
+            # Try alternative field names for RTEMS 6.x
+            try:
+                return int(self.tables[n]['maximum'])
+            except gdb.error:
+                print("error: Cannot find maximum_id for %s/%s" % (api, _class))
+                return 0
 
     def maximum(self, api, _class):
         n = self.name(api, _class)
         self.load(n)
-        return int(self.tables[n]['maximum'])
+        if n not in self.tables:
+            return 0
+        try:
+            return int(self.tables[n]['maximum'])
+        except gdb.error:
+            # Try alternative field names for RTEMS 6.x
+            try:
+                return int(self.tables[n]['maximum_objects'])
+            except gdb.error:
+                print("error: Cannot find maximum for %s/%s" % (api, _class))
+                return 0
 
     def object(self, id):
         if type(id) == gdb.Value:

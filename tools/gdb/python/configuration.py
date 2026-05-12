@@ -35,11 +35,20 @@ import gdb
 
 
 def _table():
-    return gdb.parse_and_eval('Configuration')
-
+    try:
+        return gdb.parse_and_eval('Configuration')
+    except gdb.error:
+        # Try alternative symbol names for RTEMS 6.x
+        try:
+            return gdb.parse_and_eval('_Configuration_Table')
+        except gdb.error:
+            raise gdb.error("No symbol 'Configuration' or '_Configuration_Table' in current context. Make sure you have loaded RTEMS symbols.")
 
 def fields():
-    return [field.name for field in _table().type.fields()]
+    try:
+        return [field.name for field in _table().type.fields()]
+    except:
+        return []
 
 
 def mp():
@@ -47,14 +56,22 @@ def mp():
 
 
 def smp():
-    if 'smp_enabled' in fields():
+    fields_list = fields()
+    if 'smp_enabled' in fields_list:
         return int(_table()['smp_enabled']) != 0
+    # Try alternative field name for RTEMS 6.x
+    if 'maximum_processors' in fields_list:
+        max_procs = int(_table()['maximum_processors'])
+        return max_procs > 1
     return False
 
 
 def maximum_processors():
-    if smp():
-        return int(_table()['maximum_processors'])
+    try:
+        if smp():
+            return int(_table()['maximum_processors'])
+    except:
+        pass
     return 1
 
 
